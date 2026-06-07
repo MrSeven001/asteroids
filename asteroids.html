@@ -8,24 +8,34 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: black; overflow: hidden; }
     canvas { display: block; }
+    #info {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: lime;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+    }
     #mensaje {
       position: fixed;
-      top: 20px;
+      top: 50%;
       left: 0; right: 0;
       text-align: center;
       color: white;
       font-family: Arial, sans-serif;
-      font-size: 16px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
   <canvas id="juego"></canvas>
-  <div id="mensaje">Toca la pantalla para activar el giroscopio</div>
+  <div id="info">Esperando giroscopio...</div>
+  <div id="mensaje">Toca la pantalla para activar</div>
 
   <script>
     const canvas = document.getElementById('juego');
     const ctx = canvas.getContext('2d');
+    const info = document.getElementById('info');
     const mensaje = document.getElementById('mensaje');
 
     canvas.width  = window.innerWidth;
@@ -40,42 +50,50 @@
       tamano: 20
     };
 
-    // Datos del giroscopio
-    let inclinacionX = 0; // izquierda/derecha
-    let inclinacionY = 0; // adelante/atrás
+    let inclinacionX = 0;
+    let inclinacionY = 0;
+    let giroscopioActivo = false;
 
-    // El giroscopio necesita permiso en iOS, en Android funciona solo
     document.addEventListener('click', () => {
+      mensaje.style.display = 'none';
       if (typeof DeviceMotionEvent !== 'undefined' &&
           typeof DeviceMotionEvent.requestPermission === 'function') {
-        // iPhone necesita pedir permiso
         DeviceMotionEvent.requestPermission().then(respuesta => {
           if (respuesta === 'granted') {
             activarGiroscopio();
-            mensaje.style.display = 'none';
+          } else {
+            info.textContent = 'Permiso denegado';
           }
         });
       } else {
-        // Android no necesita permiso
         activarGiroscopio();
-        mensaje.style.display = 'none';
       }
     });
 
     function activarGiroscopio() {
       window.addEventListener('deviceorientation', (evento) => {
-        // gamma = inclinación izquierda/derecha (-90 a 90)
-        // beta  = inclinación adelante/atrás (-180 a 180)
-        inclinacionX = evento.gamma / 90;  // lo normalizamos entre -1 y 1
+        giroscopioActivo = true;
+        inclinacionX = evento.gamma / 90;
         inclinacionY = evento.beta  / 90;
+
+        // Mostramos los valores en pantalla para diagnosticar
+        info.textContent =
+          'gamma: ' + (evento.gamma ? evento.gamma.toFixed(1) : 'null') +
+          ' | beta: ' + (evento.beta ? evento.beta.toFixed(1) : 'null');
       });
+
+      // Si después de 3 segundos no llegó nada, avisamos
+      setTimeout(() => {
+        if (!giroscopioActivo) {
+          info.textContent = 'Giroscopio no detectado en este dispositivo';
+        }
+      }, 3000);
     }
 
     function dibujarNave() {
       ctx.save();
       ctx.translate(nave.x, nave.y);
       ctx.rotate(nave.angulo);
-
       ctx.strokeStyle = 'white';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -84,28 +102,18 @@
       ctx.lineTo(-nave.tamano * 0.6, nave.tamano);
       ctx.closePath();
       ctx.stroke();
-
       ctx.restore();
     }
 
     function actualizarNave() {
-      // Inclinar izquierda/derecha gira la nave
       nave.angulo += inclinacionX * 0.05;
-
-      // Inclinar hacia adelante acelera la nave
       const empuje = -inclinacionY * 0.1;
       nave.velocidadX += Math.sin(nave.angulo) * empuje;
       nave.velocidadY -= Math.cos(nave.angulo) * empuje;
-
-      // Fricción para que no acelere infinito
       nave.velocidadX *= 0.98;
       nave.velocidadY *= 0.98;
-
-      // Mover la nave
       nave.x += nave.velocidadX;
       nave.y += nave.velocidadY;
-
-      // Si sale por un lado, aparece por el otro
       if (nave.x < 0) nave.x = canvas.width;
       if (nave.x > canvas.width)  nave.x = 0;
       if (nave.y < 0) nave.y = canvas.height;
