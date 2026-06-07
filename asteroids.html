@@ -47,11 +47,14 @@
     let ultimoDisparo = 0;
     let meteoritos = [];
     let puntos = 0;
+    let vidas = 2;
     let vivo = true;
+    let ronda = 1;
+    let naveEnemiga = null;
+    let puntosUltimaEnemiga = 0;
+    let invencible = false; // parpadeo al perder vida
 
-    // Crea un meteorito en un borde aleatorio de la pantalla
     function crearMeteorito(tamano, x, y) {
-      // Si no se dan coordenadas, aparece en un borde aleatorio
       if (x === undefined) {
         const borde = Math.floor(Math.random() * 4);
         if (borde === 0) { x = Math.random() * canvas.width; y = -tamano; }
@@ -60,7 +63,6 @@
         else { x = canvas.width + tamano; y = Math.random() * canvas.height; }
       }
 
-      // Apunta hacia el centro aproximadamente con algo de variación
       const anguloAlCentro = Math.atan2(
         canvas.height / 2 - y,
         canvas.width  / 2 - x
@@ -69,11 +71,9 @@
       const velocidad = tamano > 30 ? 0.8 : tamano > 15 ? 1.3 : 2.0;
 
       return {
-        x, y,
-        tamano,
+        x, y, tamano,
         velocidadX: Math.cos(anguloAlCentro) * velocidad,
         velocidadY: Math.sin(anguloAlCentro) * velocidad,
-        // Forma irregular: puntos del borde con variaciones
         forma: Array.from({ length: 10 }, (_, i) => {
           const angulo = (i / 10) * Math.PI * 2;
           const radio = tamano * (0.7 + Math.random() * 0.5);
@@ -82,8 +82,27 @@
       };
     }
 
-    // Empieza con 4 meteoritos grandes
-    let ronda = 1;
+    function crearNaveEnemiga() {
+      const borde = Math.floor(Math.random() * 4);
+      let x, y;
+      if (borde === 0) { x = Math.random() * canvas.width; y = -20; }
+      else if (borde === 1) { x = Math.random() * canvas.width; y = canvas.height + 20; }
+      else if (borde === 2) { x = -20; y = Math.random() * canvas.height; }
+      else { x = canvas.width + 20; y = Math.random() * canvas.height; }
+
+      const anguloAlCentro = Math.atan2(
+        canvas.height / 2 - y,
+        canvas.width  / 2 - x
+      ) + (Math.random() - 0.5) * 1.0;
+
+      return {
+        x, y,
+        angulo: anguloAlCentro,
+        velocidadX: Math.cos(anguloAlCentro) * 2,
+        velocidadY: Math.sin(anguloAlCentro) * 2,
+        tamano: 15
+      };
+    }
 
     function iniciarMetoritos() {
       for (let i = 0; i < ronda + 1; i++) {
@@ -95,13 +114,21 @@
       meteoritos.forEach(m => {
         m.x += m.velocidadX;
         m.y += m.velocidadY;
-
-        // Rebota por los bordes
         if (m.x < -m.tamano) m.x = canvas.width + m.tamano;
         if (m.x > canvas.width + m.tamano) m.x = -m.tamano;
         if (m.y < -m.tamano) m.y = canvas.height + m.tamano;
         if (m.y > canvas.height + m.tamano) m.y = -m.tamano;
       });
+    }
+
+    function actualizarNaveEnemiga() {
+      if (!naveEnemiga) return;
+      naveEnemiga.x += naveEnemiga.velocidadX;
+      naveEnemiga.y += naveEnemiga.velocidadY;
+      if (naveEnemiga.x < -30) naveEnemiga.x = canvas.width + 30;
+      if (naveEnemiga.x > canvas.width + 30) naveEnemiga.x = -30;
+      if (naveEnemiga.y < -30) naveEnemiga.y = canvas.height + 30;
+      if (naveEnemiga.y > canvas.height + 30) naveEnemiga.y = -30;
     }
 
     function dibujarMetoritos() {
@@ -119,38 +146,66 @@
       });
     }
 
-    // Detecta si un punto está dentro de un círculo
+    function dibujarNaveEnemiga() {
+      if (!naveEnemiga) return;
+      ctx.save();
+      ctx.translate(naveEnemiga.x, naveEnemiga.y);
+      ctx.rotate(naveEnemiga.angulo);
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 2;
+      // Forma de nave enemiga: tipo platillo
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 18, 8, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, -5, 8, 5, 0, 0, Math.PI);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     function distancia(ax, ay, bx, by) {
       return Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2);
+    }
+
+    function perderVida() {
+      vidas--;
+      if (vidas <= 0) {
+        vivo = false;
+      } else {
+        // Parpadeo de invencibilidad por 2 segundos
+        invencible = true;
+        nave.x = canvas.width / 2;
+        nave.y = canvas.height / 2;
+        nave.velocidadX = 0;
+        nave.velocidadY = 0;
+        setTimeout(() => { invencible = false; }, 2000);
+      }
     }
 
     function chequearColisiones() {
       let meteoritosNuevos = [];
 
       meteoritos = meteoritos.filter(m => {
-        // Bala vs meteorito
         let golpeado = false;
         balas = balas.filter(bala => {
           if (distancia(bala.x, bala.y, m.x, m.y) < m.tamano) {
             golpeado = true;
-            return false; // elimina la bala
+            return false;
           }
           return true;
         });
 
         if (golpeado) {
-          // Se rompe en dos pedazos más pequeños
           if (m.tamano > 15) {
             meteoritosNuevos.push(crearMeteorito(m.tamano / 2, m.x, m.y));
             meteoritosNuevos.push(crearMeteorito(m.tamano / 2, m.x, m.y));
           }
           puntos += m.tamano > 30 ? 10 : m.tamano > 15 ? 20 : 40;
-          return false; // elimina el meteorito
+          return false;
         }
 
-        // Nave vs meteorito
-        if (vivo && distancia(nave.x, nave.y, m.x, m.y) < m.tamano + nave.tamano * 0.6) {
-          vivo = false;
+        if (!invencible && distancia(nave.x, nave.y, m.x, m.y) < m.tamano + nave.tamano * 0.6) {
+          perderVida();
         }
 
         return true;
@@ -158,18 +213,60 @@
 
       meteoritos = meteoritos.concat(meteoritosNuevos);
 
-      // Si no quedan meteoritos, spawneamos más
+      // Colisión balas vs nave enemiga
+      if (naveEnemiga) {
+        balas = balas.filter(bala => {
+          if (distancia(bala.x, bala.y, naveEnemiga.x, naveEnemiga.y) < naveEnemiga.tamano + 5) {
+            // Destruida: da una vida extra
+            vidas++;
+            naveEnemiga = null;
+            puntos += 100;
+            puntosUltimaEnemiga = puntos;
+            return false;
+          }
+          return true;
+        });
+
+        // Colisión nave enemiga vs jugador
+        if (naveEnemiga && !invencible &&
+            distancia(nave.x, nave.y, naveEnemiga.x, naveEnemiga.y) < naveEnemiga.tamano + nave.tamano * 0.6) {
+          naveEnemiga = null;
+          perderVida();
+        }
+      }
+
+      // Aparece nave enemiga cada 250 puntos
+      if (!naveEnemiga && puntos >= puntosUltimaEnemiga + 250) {
+        naveEnemiga = crearNaveEnemiga();
+        puntosUltimaEnemiga = puntos;
+      }
+
       if (meteoritos.length === 0) {
         ronda++;
         iniciarMetoritos();
       }
     }
 
-    function dibujarPuntos() {
+    function dibujarHUD() {
       ctx.fillStyle = 'white';
       ctx.font = '20px Arial';
       ctx.fillText('Puntos: ' + puntos, 15, 30);
       ctx.fillText('Ronda: ' + ronda, 15, 55);
+
+      // Dibuja las vidas como navecitas arriba a la derecha
+      for (let i = 0; i < vidas; i++) {
+        ctx.save();
+        ctx.translate(canvas.width - 30 - i * 30, 25);
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(6, 10);
+        ctx.lineTo(-6, 10);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     function dibujarGameOver() {
@@ -192,8 +289,12 @@
       balas = [];
       meteoritos = [];
       puntos = 0;
+      vidas = 2;
       vivo = true;
       ronda = 1;
+      naveEnemiga = null;
+      puntosUltimaEnemiga = 0;
+      invencible = false;
       iniciarMetoritos();
     }
 
@@ -254,7 +355,13 @@
       });
     }
 
+    let parpadeo = 0;
     function dibujarNave() {
+      // Parpadea cuando es invencible
+      if (invencible) {
+        parpadeo++;
+        if (parpadeo % 6 < 3) return;
+      }
       ctx.save();
       ctx.translate(nave.x, nave.y);
       ctx.rotate(nave.angulo);
@@ -295,20 +402,20 @@
 
     function loop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       if (vivo) {
         actualizarNave();
         actualizarBalas();
         actualizarMetoritos();
+        actualizarNaveEnemiga();
         chequearColisiones();
         dibujarNave();
         dibujarBalas();
         dibujarMetoritos();
-        dibujarPuntos();
+        dibujarNaveEnemiga();
+        dibujarHUD();
       } else {
         dibujarGameOver();
       }
-
       requestAnimationFrame(loop);
     }
 
