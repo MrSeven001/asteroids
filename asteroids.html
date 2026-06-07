@@ -323,10 +323,22 @@
     });
 
     function activarGiroscopio() {
+      let filtroX = 0;
+      let filtroY = 0;
+    
       window.addEventListener('deviceorientation', (e) => {
-        inclinacionX = e.gamma / 45;
-        inclinacionY = e.beta  / 25;
-      });
+        const rawX = e.gamma / 45;
+        const rawY = e.beta  / 25;
+    
+        // Suavizado: mezcla el valor anterior con el nuevo
+        // 0.2 = más suave pero más lag / 0.4 = más rápido pero más temblor
+        filtroX = filtroX * 0.7 + rawX * 0.3;
+        filtroY = filtroY * 0.7 + rawY * 0.3;
+    
+        inclinacionX = filtroX;
+        inclinacionY = filtroY;
+      }, { passive: true });
+    
       iniciarMetoritos();
     }
 
