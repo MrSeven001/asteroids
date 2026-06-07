@@ -197,8 +197,20 @@
 
         if (golpeado) {
           if (m.tamano > 15) {
-            meteoritosNuevos.push(crearMeteorito(m.tamano / 2, m.x, m.y));
-            meteoritosNuevos.push(crearMeteorito(m.tamano / 2, m.x, m.y));
+            const angulo1 = Math.atan2(m.velocidadY, m.velocidadX) + 0.6;
+            const angulo2 = Math.atan2(m.velocidadY, m.velocidadX) - 0.6;
+            const vel = m.tamano > 30 ? 1.3 : 2.0;
+          
+            const pedazo1 = crearMeteorito(m.tamano / 2, m.x, m.y);
+            pedazo1.velocidadX = Math.cos(angulo1) * vel;
+            pedazo1.velocidadY = Math.sin(angulo1) * vel;
+          
+            const pedazo2 = crearMeteorito(m.tamano / 2, m.x, m.y);
+            pedazo2.velocidadX = Math.cos(angulo2) * vel;
+            pedazo2.velocidadY = Math.sin(angulo2) * vel;
+          
+            meteoritosNuevos.push(pedazo1);
+            meteoritosNuevos.push(pedazo2);
           }
           puntos += m.tamano > 30 ? 10 : m.tamano > 15 ? 20 : 40;
           return false;
