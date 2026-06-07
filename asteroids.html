@@ -83,10 +83,13 @@
     }
 
     // Empieza con 4 meteoritos grandes
+    let ronda = 1;
+
     function iniciarMetoritos() {
-      for (let i = 0; i < 1; i++) {
+      for (let i = 0; i < 1 + ronda; i++) {
         meteoritos.push(crearMeteorito(45));
       }
+      ronda++;
     }
 
     function actualizarMetoritos() {
