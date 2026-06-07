@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="screen-orientation" content="landscape">
   <title>Asteroids</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -333,9 +332,8 @@
 
     function activarGiroscopio() {
       window.addEventListener('deviceorientation', (e) => {
-        // En horizontal los ejes se intercambian
-        inclinacionX = e.beta  / 45;
-        inclinacionY = e.gamma / 25;
+        inclinacionX = e.gamma / 45;
+        inclinacionY = e.beta  / 25;
       });
     }
 
