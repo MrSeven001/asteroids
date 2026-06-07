@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Asteroids</title>
+  <style>
+    body { background: black; margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="juego"></canvas>
+
+  <script>
+    // Conseguimos el "lienzo" donde dibujaremos todo
+    const canvas = document.getElementById('juego');
+    const ctx = canvas.getContext('2d');
+
+    // El lienzo ocupa toda la pantalla
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Los datos de nuestra nave
+    const nave = {
+      x: canvas.width / 2,   // empieza en el centro horizontal
+      y: canvas.height / 2,  // empieza en el centro vertical
+      angulo: 0,              // hacia dónde apunta (en radianes)
+      tamano: 20              // tamaño en píxeles
+    };
+
+    // Esta función dibuja la nave
+    function dibujarNave() {
+      ctx.save();                          // guarda el estado del lienzo
+      ctx.translate(nave.x, nave.y);      // mueve el origen al centro de la nave
+      ctx.rotate(nave.angulo);            // rota según el ángulo actual
+
+      ctx.strokeStyle = 'white';          // color del trazo
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -nave.tamano);                    // punta
+      ctx.lineTo(nave.tamano * 0.6, nave.tamano);     // esquina derecha
+      ctx.lineTo(-nave.tamano * 0.6, nave.tamano);    // esquina izquierda
+      ctx.closePath();
+      ctx.stroke();
+
+      ctx.restore();                       // restaura el estado del lienzo
+    }
+
+    // El "loop" del juego: se repite ~60 veces por segundo
+    function loop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // borra la pantalla
+      dibujarNave();                                      // dibuja la nave
+      requestAnimationFrame(loop);                        // llama al loop de nuevo
+    }
+
+    loop(); // ¡arranca el juego!
+  </script>
+</body>
+</html>
