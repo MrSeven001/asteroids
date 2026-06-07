@@ -40,27 +40,71 @@
       tamano: 20
     };
 
-    let inclinacionX = 0; // izquierda/derecha
-    let inclinacionY = 0; // arriba/abajo
+    let inclinacionX = 0;
+    let inclinacionY = 0;
+    let juegoActivo = false;
+
+    // Lista de balas en pantalla
+    let balas = [];
+
+    // Para no disparar 100 balas con un solo toque
+    let ultimoDisparo = 0;
 
     document.addEventListener('click', () => {
-      mensaje.style.display = 'none';
-      if (typeof DeviceMotionEvent !== 'undefined' &&
-          typeof DeviceMotionEvent.requestPermission === 'function') {
-        DeviceMotionEvent.requestPermission().then(r => {
-          if (r === 'granted') activarGiroscopio();
-        });
+      if (!juegoActivo) {
+        // Primer toque: activa el giroscopio
+        mensaje.style.display = 'none';
+        juegoActivo = true;
+        if (typeof DeviceMotionEvent !== 'undefined' &&
+            typeof DeviceMotionEvent.requestPermission === 'function') {
+          DeviceMotionEvent.requestPermission().then(r => {
+            if (r === 'granted') activarGiroscopio();
+          });
+        } else {
+          activarGiroscopio();
+        }
       } else {
-        activarGiroscopio();
+        // Toques siguientes: dispara
+        disparar();
       }
     });
 
     function activarGiroscopio() {
       window.addEventListener('deviceorientation', (e) => {
-        // gamma = inclinación izquierda/derecha
-        // beta  = inclinación adelante/atrás
-        inclinacionX = e.gamma / 45; // normalizado: -1 a 1 con 45 grados
+        inclinacionX = e.gamma / 45;
         inclinacionY = e.beta  / 45;
+      });
+    }
+
+    function disparar() {
+      const ahora = Date.now();
+      if (ahora - ultimoDisparo < 300) return; // máximo 1 bala cada 0.3 segundos
+      ultimoDisparo = ahora;
+
+      balas.push({
+        x: nave.x,
+        y: nave.y,
+        velocidadX: Math.sin(nave.angulo) * 8,
+        velocidadY: -Math.cos(nave.angulo) * 8
+      });
+    }
+
+    function actualizarBalas() {
+      balas = balas.filter(bala => {
+        bala.x += bala.velocidadX;
+        bala.y += bala.velocidadY;
+        // Elimina la bala si sale de la pantalla
+        return bala.x > 0 && bala.x < canvas.width &&
+               bala.y > 0 && bala.y < canvas.height;
+      });
+    }
+
+    function dibujarBalas() {
+      ctx.fillStyle = 'yellow';
+      balas.forEach(bala => {
+        ctx.beginPath();
+        ctx.arc(bala.x, bala.y, 3, 0, Math.PI * 2);
+        ctx.fill();
       });
     }
 
@@ -82,19 +126,14 @@
     }
 
     function actualizarNave() {
-      // Calculamos la fuerza total de inclinación
       const fuerza = Math.sqrt(inclinacionX * inclinacionX + inclinacionY * inclinacionY);
 
-      if (fuerza > 0.1) { // zona muerta para evitar temblor
-        // El ángulo apunta hacia donde inclinas
+      if (fuerza > 0.1) {
         nave.angulo = Math.atan2(inclinacionX, -inclinacionY);
-
-        // La nave se mueve hacia donde apunta
         const velocidad = Math.min(fuerza, 1) * 3;
         nave.velocidadX = Math.sin(nave.angulo) * velocidad;
         nave.velocidadY = -Math.cos(nave.angulo) * velocidad;
       } else {
-        // Si está casi plano, frena suavemente
         nave.velocidadX *= 0.9;
         nave.velocidadY *= 0.9;
       }
@@ -102,7 +141,6 @@
       nave.x += nave.velocidadX;
       nave.y += nave.velocidadY;
 
-      // Si sale por un lado aparece por el otro
       if (nave.x < 0) nave.x = canvas.width;
       if (nave.x > canvas.width)  nave.x = 0;
       if (nave.y < 0) nave.y = canvas.height;
@@ -112,7 +150,9 @@
     function loop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       actualizarNave();
+      actualizarBalas();
       dibujarNave();
+      dibujarBalas();
       requestAnimationFrame(loop);
     }
 
