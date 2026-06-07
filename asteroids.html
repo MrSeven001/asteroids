@@ -84,7 +84,7 @@
 
     // Empieza con 4 meteoritos grandes
     function iniciarMetoritos() {
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 1; i++) {
         meteoritos.push(crearMeteorito(45));
       }
     }
@@ -166,6 +166,7 @@
       ctx.fillStyle = 'white';
       ctx.font = '20px Arial';
       ctx.fillText('Puntos: ' + puntos, 15, 30);
+      ctx.fillText('Ronda: ' + ronda, 15, 55);
     }
 
     function dibujarGameOver() {
