@@ -43,16 +43,11 @@
     let inclinacionX = 0;
     let inclinacionY = 0;
     let juegoActivo = false;
-
-    // Lista de balas en pantalla
     let balas = [];
-
-    // Para no disparar 100 balas con un solo toque
     let ultimoDisparo = 0;
 
     document.addEventListener('click', () => {
       if (!juegoActivo) {
-        // Primer toque: activa el giroscopio
         mensaje.style.display = 'none';
         juegoActivo = true;
         if (typeof DeviceMotionEvent !== 'undefined' &&
@@ -64,21 +59,24 @@
           activarGiroscopio();
         }
       } else {
-        // Toques siguientes: dispara
         disparar();
       }
     });
 
     function activarGiroscopio() {
       window.addEventListener('deviceorientation', (e) => {
+        // Izquierda/derecha: igual que antes
         inclinacionX = e.gamma / 45;
-        inclinacionY = e.beta  / 45;
+
+        // Arriba/abajo: más sensible, con 25 grados ya llega al máximo
+        // Y le restamos un offset para que "plano" sea el centro
+        inclinacionY = e.beta / 25;
       });
     }
 
     function disparar() {
       const ahora = Date.now();
-      if (ahora - ultimoDisparo < 300) return; // máximo 1 bala cada 0.3 segundos
+      if (ahora - ultimoDisparo < 300) return;
       ultimoDisparo = ahora;
 
       balas.push({
@@ -93,7 +91,6 @@
       balas = balas.filter(bala => {
         bala.x += bala.velocidadX;
         bala.y += bala.velocidadY;
-        // Elimina la bala si sale de la pantalla
         return bala.x > 0 && bala.x < canvas.width &&
                bala.y > 0 && bala.y < canvas.height;
       });
@@ -112,7 +109,6 @@
       ctx.save();
       ctx.translate(nave.x, nave.y);
       ctx.rotate(nave.angulo);
-
       ctx.strokeStyle = 'white';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -121,21 +117,34 @@
       ctx.lineTo(-nave.tamano * 0.6, nave.tamano);
       ctx.closePath();
       ctx.stroke();
-
       ctx.restore();
     }
 
     function actualizarNave() {
       const fuerza = Math.sqrt(inclinacionX * inclinacionX + inclinacionY * inclinacionY);
 
-      if (fuerza > 0.1) {
-        nave.angulo = Math.atan2(inclinacionX, -inclinacionY);
+      if (fuerza > 0.15) {
+        // Ángulo objetivo hacia donde inclinas
+        const anguloObjetivo = Math.atan2(inclinacionX, -inclinacionY);
+
+        // Interpolación suave: la nave gira poco a poco hacia el objetivo
+        // en vez de saltar directamente
+        let diff = anguloObjetivo - nave.angulo;
+
+        // Ajustamos la diferencia para que siempre tome el camino más corto
+        if (diff > Math.PI)  diff -= Math.PI * 2;
+        if (diff < -Math.PI) diff += Math.PI * 2;
+
+        nave.angulo += diff * 0.12; // 0.12 = qué tan rápido gira (más alto = más rápido)
+
+        // Velocidad proporcional a la inclinación
         const velocidad = Math.min(fuerza, 1) * 3;
-        nave.velocidadX = Math.sin(nave.angulo) * velocidad;
-        nave.velocidadY = -Math.cos(nave.angulo) * velocidad;
+        nave.velocidadX += (Math.sin(nave.angulo) * velocidad - nave.velocidadX) * 0.15;
+        nave.velocidadY += (-Math.cos(nave.angulo) * velocidad - nave.velocidadY) * 0.15;
       } else {
-        nave.velocidadX *= 0.9;
-        nave.velocidadY *= 0.9;
+        // Zona muerta: frena suavemente
+        nave.velocidadX *= 0.88;
+        nave.velocidadY *= 0.88;
       }
 
       nave.x += nave.velocidadX;
