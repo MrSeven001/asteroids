@@ -86,10 +86,9 @@
     let ronda = 1;
 
     function iniciarMetoritos() {
-      for (let i = 0; i < 1 + ronda; i++) {
+      for (let i = 0; i < ronda + 1; i++) {
         meteoritos.push(crearMeteorito(45));
       }
-      ronda++;
     }
 
     function actualizarMetoritos() {
@@ -161,6 +160,7 @@
 
       // Si no quedan meteoritos, spawneamos más
       if (meteoritos.length === 0) {
+        ronda++;
         iniciarMetoritos();
       }
     }
@@ -193,6 +193,7 @@
       meteoritos = [];
       puntos = 0;
       vivo = true;
+      ronda = 1;
       iniciarMetoritos();
     }
 
