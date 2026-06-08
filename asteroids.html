@@ -105,8 +105,9 @@
     }
 
     function iniciarMetoritos() {
-      for (let i = 0; i < ronda + 1; i++) {
-        meteoritos.push(crearMeteorito(60));
+      const cantidad = ronda + 2;
+      for (let i = 0; i < cantidad; i++) {
+        meteoritos.push(crearMeteorito(45));
       }
     }
 
@@ -257,7 +258,7 @@
       ctx.fillStyle = 'white';
       ctx.font = '20px Arial';
       ctx.fillText('Puntos: ' + puntos, 15, 30);
-      ctx.fillText('Ronda: ' + ronda, 15, 55);
+      ctx.fillText('Ronda: ' + (ronda + 1), 15, 55);
 
       for (let i = 0; i < vidas; i++) {
         ctx.save();
