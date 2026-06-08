@@ -400,8 +400,7 @@
         if (diff > Math.PI)  diff -= Math.PI * 2;
         if (diff < -Math.PI) diff += Math.PI * 2;
         nave.angulo += diff * 0.12;
-        const velocidadBase = Math.min(fuerza, 1) * 2.5;
-        const velocidad = inclinacionY < -0.15 ? velocidadBase * 2.5 : velocidadBase;
+        const velocidad = Math.min(fuerza, 1) * 1.8;
         nave.velocidadX += (Math.sin(nave.angulo) * velocidad - nave.velocidadX) * 0.15;
         nave.velocidadY += (-Math.cos(nave.angulo) * velocidad - nave.velocidadY) * 0.15;
       } else {
