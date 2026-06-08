@@ -326,7 +326,8 @@
     function activarGiroscopio() {
       let filtroX = 0;
       let filtroY = 0;
-
+      let giroscopioPrimer = false;
+    
       window.addEventListener('deviceorientation', (e) => {
         const rawX = e.gamma / 45;
         const rawY = e.beta  / 25;
@@ -334,9 +335,13 @@
         filtroY = filtroY * 0.7 + rawY * 0.3;
         inclinacionX = filtroX;
         inclinacionY = filtroY;
+    
+        // Solo inicia los meteoritos la primera vez
+        if (!giroscopioPrimer) {
+          giroscopioPrimer = true;
+          iniciarMetoritos();
+        }
       }, { passive: true });
-
-      iniciarMetoritos();
     }
 
     function disparar() {
