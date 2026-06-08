@@ -107,7 +107,7 @@
     function iniciarMetoritos() {
       const cantidad = ronda + 2;
       for (let i = 0; i < cantidad; i++) {
-        meteoritos.push(crearMeteorito(45));
+        meteoritos.push(crearMeteorito(70));
       }
     }
 
@@ -297,7 +297,7 @@
       puntos = 0;
       vidas = 2;
       vivo = true;
-      ronda = 1;
+      ronda = 0;
       naveEnemiga = null;
       puntosUltimaEnemiga = 0;
       invencible = false;
@@ -326,20 +326,16 @@
     function activarGiroscopio() {
       let filtroX = 0;
       let filtroY = 0;
-    
+
       window.addEventListener('deviceorientation', (e) => {
         const rawX = e.gamma / 45;
         const rawY = e.beta  / 25;
-    
-        // Suavizado: mezcla el valor anterior con el nuevo
-        // 0.2 = más suave pero más lag / 0.4 = más rápido pero más temblor
         filtroX = filtroX * 0.7 + rawX * 0.3;
         filtroY = filtroY * 0.7 + rawY * 0.3;
-    
         inclinacionX = filtroX;
         inclinacionY = filtroY;
       }, { passive: true });
-    
+
       iniciarMetoritos();
     }
 
