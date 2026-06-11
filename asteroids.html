@@ -84,11 +84,11 @@
       };
     }
 
+    let metoritosEnCola = 0;
+    let tiempoUltimoSpawn = 0;
+    
     function iniciarMetoritos() {
-      const cantidad = ronda + 3;
-      for (let i = 0; i < cantidad; i++) {
-        meteoritos.push(crearMeteorito(35));
-      }
+      metoritosEnCola = ronda + 3;
     }
 
     function actualizarMetoritos() {
@@ -218,7 +218,7 @@
         puntosUltimaEnemiga = puntos;
       }
 
-      if (meteoritos.length === 0) {
+      if (meteoritos.length === 0 && metoritosEnCola === 0) {
         ronda++;
         iniciarMetoritos();
       }
@@ -372,6 +372,13 @@
     function loop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (vivo) {
+        // Suelta un meteorito cada cierto tiempo si quedan en cola
+        if (metoritosEnCola > 0 && Date.now() - tiempoUltimoSpawn > 600) {
+          meteoritos.push(crearMeteorito(35));
+          metoritosEnCola--;
+          tiempoUltimoSpawn = Date.now();
+        }
+      
         actualizarNave();
         actualizarBalas();
         actualizarMetoritos();
