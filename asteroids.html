@@ -33,8 +33,8 @@
 
     const nave = {
       x: canvas.width / 2,
-      y: canvas.height - 60, // Fija cerca de la parte inferior
-      angulo: 0, // Siempre apunta hacia arriba
+      y: canvas.height - 60,
+      angulo: 0,
       velocidadX: 0,
       tamano: 20
     };
@@ -42,6 +42,7 @@
     let inclinacionX = 0;
     let juegoActivo = false;
     let balas = [];
+    let balasEnemigas = [];
     let ultimoDisparo = 0;
     let meteoritos = [];
     let puntos = 0;
@@ -51,15 +52,18 @@
     let naveEnemiga = null;
     let puntosUltimaEnemiga = 0;
     let invencible = false;
+    let jefe = null;
+    let ultimoDisparoJefe = 0;
+    let escudo = false;
 
     function crearMeteorito(tamano, x, y) {
       if (x === undefined) {
         x = Math.random() * canvas.width;
         y = -tamano;
       }
-    
-      const velocidad = 1.5 + Math.random() * 1.5; // velocidad variada
-    
+
+      const velocidad = 1.5 + Math.random() * 1.5;
+
       return {
         x, y, tamano,
         velocidadX: 0,
@@ -77,18 +81,52 @@
       const y = -20;
       return {
         x, y,
-        angulo: Math.PI, // apunta hacia abajo
+        angulo: Math.PI,
         velocidadX: (Math.random() - 0.5) * 1.5,
         velocidadY: 1.2,
         tamano: 15
       };
     }
 
+    // ===== SISTEMA DE JEFES =====
+    // Cada jefe es un polígono regular de "lados" lados.
+    // Dispara una bala desde cada vértice hacia afuera.
+    function crearJefe(lados, velocidadMov, intervaloDisparo) {
+      return {
+        lados: lados,
+        x: canvas.width / 2,
+        y: 100,
+        tamano: 50,
+        vidaMax: 15 + ronda * 3,
+        vida: 15 + ronda * 3,
+        rotacion: 0,
+        velocidadX: velocidadMov,
+        intervaloDisparo: intervaloDisparo
+      };
+    }
+
+    // Devuelve la configuración del jefe según la ronda (10, 20, 30...)
+    function obtenerConfigJefe(numeroJefe) {
+      // numeroJefe: 1 = ronda 10, 2 = ronda 20, etc.
+      switch (numeroJefe) {
+        case 1: return { lados: 3, velocidad: 1.5, intervalo: 1500 }; // Triángulo
+        default: return { lados: 3, velocidad: 1.5, intervalo: 1500 };
+      }
+    }
+
     let metoritosEnCola = 0;
     let tiempoUltimoSpawn = 0;
-    
+
     function iniciarMetoritos() {
-      metoritosEnCola = ronda + 3;
+      const numeroRonda = ronda + 1;
+      if (numeroRonda % 10 === 0 && !jefe) {
+        const numeroJefe = numeroRonda / 10;
+        const config = obtenerConfigJefe(numeroJefe);
+        jefe = crearJefe(config.lados, config.velocidad, config.intervalo);
+        metoritosEnCola = 0;
+      } else {
+        metoritosEnCola = ronda + 3;
+      }
     }
 
     function actualizarMetoritos() {
@@ -96,12 +134,11 @@
         m.x += m.velocidadX;
         m.y += m.velocidadY;
 
-        // Si sale por arriba/abajo, vuelve a aparecer arriba
         if (m.y > canvas.height + m.tamano) {
           m.y = -m.tamano;
           m.x = Math.random() * canvas.width;
+          m.velocidadY = 1.5 + Math.random() * 1.5;
         }
-        // Rebote en los lados
         if (m.x < -m.tamano) m.x = canvas.width + m.tamano;
         if (m.x > canvas.width + m.tamano) m.x = -m.tamano;
       });
@@ -118,6 +155,55 @@
         if (naveEnemiga.x < -30) naveEnemiga.x = canvas.width + 30;
         if (naveEnemiga.x > canvas.width + 30) naveEnemiga.x = -30;
       }
+    }
+
+    // Calcula las posiciones de los vértices de un polígono regular
+    function obtenerVertices(jefe) {
+      const vertices = [];
+      for (let i = 0; i < jefe.lados; i++) {
+        // -PI/2 para que siempre haya un vértice apuntando hacia arriba
+        const angulo = jefe.rotacion + (i / jefe.lados) * Math.PI * 2 - Math.PI / 2;
+        vertices.push({
+          x: jefe.x + Math.cos(angulo) * jefe.tamano,
+          y: jefe.y + Math.sin(angulo) * jefe.tamano,
+          angulo: angulo
+        });
+      }
+      return vertices;
+    }
+
+    function actualizarJefe() {
+      if (!jefe) return;
+      jefe.rotacion += 0.005;
+
+      // Movimiento de lado a lado (rebota en los bordes)
+      jefe.x += jefe.velocidadX;
+      if (jefe.x < jefe.tamano || jefe.x > canvas.width - jefe.tamano) {
+        jefe.velocidadX *= -1;
+      }
+
+      // Dispara desde cada vértice
+      const ahora = Date.now();
+      if (ahora - ultimoDisparoJefe > jefe.intervaloDisparo) {
+        ultimoDisparoJefe = ahora;
+        const vertices = obtenerVertices(jefe);
+        vertices.forEach(v => {
+          balasEnemigas.push({
+            x: v.x,
+            y: v.y,
+            velocidadX: Math.cos(v.angulo) * 3,
+            velocidadY: Math.sin(v.angulo) * 3
+          });
+        });
+      }
+    }
+
+    function actualizarBalasEnemigas() {
+      balasEnemigas = balasEnemigas.filter(b => {
+        b.x += b.velocidadX;
+        b.y += b.velocidadY;
+        return b.y < canvas.height + 10 && b.x > -10 && b.x < canvas.width + 10 && b.y > -10;
+      });
     }
 
     function dibujarMetoritos() {
@@ -151,6 +237,40 @@
       ctx.restore();
     }
 
+    function dibujarJefe() {
+      if (!jefe) return;
+
+      const vertices = obtenerVertices(jefe);
+
+      ctx.strokeStyle = 'orangered';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      vertices.forEach((v, i) => {
+        if (i === 0) ctx.moveTo(v.x, v.y);
+        else ctx.lineTo(v.x, v.y);
+      });
+      ctx.closePath();
+      ctx.stroke();
+
+      // Barra de vida
+      const anchoBarra = 200;
+      const x = canvas.width / 2 - anchoBarra / 2;
+      const y = 20;
+      ctx.strokeStyle = 'white';
+      ctx.strokeRect(x, y, anchoBarra, 12);
+      ctx.fillStyle = 'orangered';
+      ctx.fillRect(x, y, anchoBarra * (jefe.vida / jefe.vidaMax), 12);
+    }
+
+    function dibujarBalasEnemigas() {
+      ctx.fillStyle = 'orangered';
+      balasEnemigas.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
     function distancia(ax, ay, bx, by) {
       return Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2);
     }
@@ -169,7 +289,7 @@
 
     function chequearColisiones() {
       let meteoritosNuevos = [];
-    
+
       meteoritos = meteoritos.filter(m => {
         let golpeado = false;
         balas = balas.filter(bala => {
@@ -179,21 +299,21 @@
           }
           return true;
         });
-    
+
         if (golpeado) {
           puntos += 10;
           return false;
         }
-    
+
         if (!invencible && distancia(nave.x, nave.y, m.x, m.y) < m.tamano + nave.tamano * 0.6) {
           perderVida();
         }
-    
+
         return true;
       });
-    
+
       meteoritos = meteoritos.concat(meteoritosNuevos);
-    
+
       if (naveEnemiga) {
         let naveEnemigaDestruida = false;
         balas = balas.filter(bala => {
@@ -210,19 +330,51 @@
           naveEnemiga = null;
         }
       }
-    
+
       if (naveEnemiga && !invencible &&
           distancia(nave.x, nave.y, naveEnemiga.x, naveEnemiga.y) < naveEnemiga.tamano + nave.tamano * 0.6) {
         naveEnemiga = null;
         perderVida();
       }
-    
+
       if (!naveEnemiga && puntos >= puntosUltimaEnemiga + 250) {
         naveEnemiga = crearNaveEnemiga();
         puntosUltimaEnemiga = puntos;
       }
-    
-      if (meteoritos.length === 0 && metoritosEnCola === 0) {
+
+      // Colisión balas vs jefe
+      if (jefe) {
+        balas = balas.filter(bala => {
+          if (distancia(bala.x, bala.y, jefe.x, jefe.y) < jefe.tamano) {
+            jefe.vida--;
+            if (jefe.vida <= 0) {
+              puntos += 500;
+              escudo = true;
+              setTimeout(() => { escudo = false; }, 5000);
+              jefe = null;
+              balasEnemigas = [];
+              ronda++;
+              iniciarMetoritos();
+            }
+            return false;
+          }
+          return true;
+        });
+      }
+
+      // Colisión balas enemigas vs nave
+      if (!invencible && !escudo) {
+        balasEnemigas = balasEnemigas.filter(b => {
+          if (distancia(b.x, b.y, nave.x, nave.y) < nave.tamano * 0.6 + 4) {
+            perderVida();
+            return false;
+          }
+          return true;
+        });
+      }
+
+      // Si no hay jefe activo, revisa fin de ronda normal
+      if (!jefe && meteoritos.length === 0 && metoritosEnCola === 0) {
         ronda++;
         iniciarMetoritos();
       }
@@ -246,6 +398,13 @@
         ctx.stroke();
         ctx.restore();
       }
+
+      // Indicador de escudo
+      if (escudo) {
+        ctx.fillStyle = 'cyan';
+        ctx.font = '16px Arial';
+        ctx.fillText('ESCUDO ACTIVO', 15, 55);
+      }
     }
 
     function dibujarGameOver() {
@@ -263,6 +422,7 @@
       nave.x = canvas.width / 2;
       nave.velocidadX = 0;
       balas = [];
+      balasEnemigas = [];
       meteoritos = [];
       puntos = 0;
       vidas = 2;
@@ -271,6 +431,8 @@
       naveEnemiga = null;
       puntosUltimaEnemiga = 0;
       invencible = false;
+      escudo = false;
+      jefe = null;
       iniciarMetoritos();
     }
 
@@ -317,7 +479,7 @@
         x: nave.x,
         y: nave.y,
         velocidadX: 0,
-        velocidadY: -8 // Siempre dispara hacia arriba
+        velocidadY: -8
       });
     }
 
@@ -346,8 +508,7 @@
       }
       ctx.save();
       ctx.translate(nave.x, nave.y);
-      // Siempre apunta hacia arriba (sin rotación)
-      ctx.strokeStyle = 'white';
+      ctx.strokeStyle = escudo ? 'cyan' : 'white';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, -nave.tamano);
@@ -355,11 +516,18 @@
       ctx.lineTo(-nave.tamano * 0.6, nave.tamano);
       ctx.closePath();
       ctx.stroke();
+
+      if (escudo) {
+        ctx.beginPath();
+        ctx.arc(0, 0, nave.tamano * 1.4, 0, Math.PI * 2);
+        ctx.strokeStyle = 'cyan';
+        ctx.stroke();
+      }
+
       ctx.restore();
     }
 
     function actualizarNave() {
-      // Solo movimiento horizontal según inclinación
       if (Math.abs(inclinacionX) > 0.1) {
         nave.velocidadX += (inclinacionX * 5 - nave.velocidadX) * 0.15;
       } else {
@@ -368,7 +536,6 @@
 
       nave.x += nave.velocidadX;
 
-      // Limita a los bordes de la pantalla (no se sale)
       if (nave.x < nave.tamano) nave.x = nave.tamano;
       if (nave.x > canvas.width - nave.tamano) nave.x = canvas.width - nave.tamano;
     }
@@ -376,22 +543,25 @@
     function loop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (vivo) {
-        // Suelta un meteorito cada cierto tiempo si quedan en cola
         if (metoritosEnCola > 0 && Date.now() - tiempoUltimoSpawn > 600) {
           meteoritos.push(crearMeteorito(35));
           metoritosEnCola--;
           tiempoUltimoSpawn = Date.now();
         }
-      
+
         actualizarNave();
         actualizarBalas();
         actualizarMetoritos();
         actualizarNaveEnemiga();
+        actualizarJefe();
+        actualizarBalasEnemigas();
         chequearColisiones();
         dibujarNave();
         dibujarBalas();
         dibujarMetoritos();
         dibujarNaveEnemiga();
+        dibujarJefe();
+        dibujarBalasEnemigas();
         dibujarHUD();
       } else {
         dibujarGameOver();
