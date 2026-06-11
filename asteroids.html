@@ -33,15 +33,13 @@
 
     const nave = {
       x: canvas.width / 2,
-      y: canvas.height / 2,
-      angulo: 0,
+      y: canvas.height - 60, // Fija cerca de la parte inferior
+      angulo: 0, // Siempre apunta hacia arriba
       velocidadX: 0,
-      velocidadY: 0,
       tamano: 20
     };
 
     let inclinacionX = 0;
-    let inclinacionY = 0;
     let juegoActivo = false;
     let balas = [];
     let ultimoDisparo = 0;
@@ -55,25 +53,18 @@
     let invencible = false;
 
     function crearMeteorito(tamano, x, y) {
+      // Siempre aparece arriba, en una posición X aleatoria
       if (x === undefined) {
-        const borde = Math.floor(Math.random() * 4);
-        if (borde === 0) { x = Math.random() * canvas.width; y = -tamano; }
-        else if (borde === 1) { x = Math.random() * canvas.width; y = canvas.height + tamano; }
-        else if (borde === 2) { x = -tamano; y = Math.random() * canvas.height; }
-        else { x = canvas.width + tamano; y = Math.random() * canvas.height; }
+        x = Math.random() * canvas.width;
+        y = -tamano;
       }
 
-      const anguloAlCentro = Math.atan2(
-        canvas.height / 2 - y,
-        canvas.width  / 2 - x
-      ) + (Math.random() - 0.5) * 1.5;
-
-      const velocidad = tamano > 30 ? 0.8 : tamano > 15 ? 1.3 : 1.5;
+      const velocidad = tamano > 30 ? 1.0 : 1.8;
 
       return {
         x, y, tamano,
-        velocidadX: Math.cos(anguloAlCentro) * velocidad,
-        velocidadY: Math.sin(anguloAlCentro) * velocidad,
+        velocidadX: 0,
+        velocidadY: velocidad,
         forma: Array.from({ length: 10 }, (_, i) => {
           const angulo = (i / 10) * Math.PI * 2;
           const radio = tamano * (0.7 + Math.random() * 0.5);
@@ -83,23 +74,13 @@
     }
 
     function crearNaveEnemiga() {
-      const borde = Math.floor(Math.random() * 4);
-      let x, y;
-      if (borde === 0) { x = Math.random() * canvas.width; y = -20; }
-      else if (borde === 1) { x = Math.random() * canvas.width; y = canvas.height + 20; }
-      else if (borde === 2) { x = -20; y = Math.random() * canvas.height; }
-      else { x = canvas.width + 20; y = Math.random() * canvas.height; }
-
-      const anguloAlCentro = Math.atan2(
-        canvas.height / 2 - y,
-        canvas.width  / 2 - x
-      ) + (Math.random() - 0.5) * 1.0;
-
+      const x = Math.random() * canvas.width;
+      const y = -20;
       return {
         x, y,
-        angulo: anguloAlCentro,
-        velocidadX: Math.cos(anguloAlCentro) * 2,
-        velocidadY: Math.sin(anguloAlCentro) * 2,
+        angulo: Math.PI, // apunta hacia abajo
+        velocidadX: (Math.random() - 0.5) * 1.5,
+        velocidadY: 1.2,
         tamano: 15
       };
     }
@@ -115,10 +96,15 @@
       meteoritos.forEach(m => {
         m.x += m.velocidadX;
         m.y += m.velocidadY;
+
+        // Si sale por arriba/abajo, vuelve a aparecer arriba
+        if (m.y > canvas.height + m.tamano) {
+          m.y = -m.tamano;
+          m.x = Math.random() * canvas.width;
+        }
+        // Rebote en los lados
         if (m.x < -m.tamano) m.x = canvas.width + m.tamano;
         if (m.x > canvas.width + m.tamano) m.x = -m.tamano;
-        if (m.y < -m.tamano) m.y = canvas.height + m.tamano;
-        if (m.y > canvas.height + m.tamano) m.y = -m.tamano;
       });
     }
 
@@ -126,10 +112,13 @@
       if (!naveEnemiga) return;
       naveEnemiga.x += naveEnemiga.velocidadX;
       naveEnemiga.y += naveEnemiga.velocidadY;
-      if (naveEnemiga.x < -30) naveEnemiga.x = canvas.width + 30;
-      if (naveEnemiga.x > canvas.width + 30) naveEnemiga.x = -30;
-      if (naveEnemiga.y < -30) naveEnemiga.y = canvas.height + 30;
-      if (naveEnemiga.y > canvas.height + 30) naveEnemiga.y = -30;
+      if (naveEnemiga.y > canvas.height + 30) {
+        naveEnemiga = null;
+      }
+      if (naveEnemiga) {
+        if (naveEnemiga.x < -30) naveEnemiga.x = canvas.width + 30;
+        if (naveEnemiga.x > canvas.width + 30) naveEnemiga.x = -30;
+      }
     }
 
     function dibujarMetoritos() {
@@ -174,9 +163,7 @@
       } else {
         invencible = true;
         nave.x = canvas.width / 2;
-        nave.y = canvas.height / 2;
         nave.velocidadX = 0;
-        nave.velocidadY = 0;
         setTimeout(() => { invencible = false; }, 2000);
       }
     }
@@ -196,22 +183,18 @@
 
         if (golpeado) {
           if (m.tamano > 40) {
-            const angulo1 = Math.atan2(m.velocidadY, m.velocidadX) + 0.6;
-            const angulo2 = Math.atan2(m.velocidadY, m.velocidadX) - 0.6;
-            const vel = m.tamano > 30 ? 1.3 : 2.0;
+            const pedazo1 = crearMeteorito(m.tamano / 2, m.x - 10, m.y);
+            pedazo1.velocidadX = -1;
+            pedazo1.velocidadY = 1.5;
 
-            const pedazo1 = crearMeteorito(m.tamano / 2, m.x, m.y);
-            pedazo1.velocidadX = Math.cos(angulo1) * vel;
-            pedazo1.velocidadY = Math.sin(angulo1) * vel;
-
-            const pedazo2 = crearMeteorito(m.tamano / 2, m.x, m.y);
-            pedazo2.velocidadX = Math.cos(angulo2) * vel;
-            pedazo2.velocidadY = Math.sin(angulo2) * vel;
+            const pedazo2 = crearMeteorito(m.tamano / 2, m.x + 10, m.y);
+            pedazo2.velocidadX = 1;
+            pedazo2.velocidadY = 1.5;
 
             meteoritosNuevos.push(pedazo1);
             meteoritosNuevos.push(pedazo2);
           }
-          puntos += m.tamano > 30 ? 10 : m.tamano > 15 ? 20 : 40;
+          puntos += m.tamano > 40 ? 10 : 20;
           return false;
         }
 
@@ -287,10 +270,7 @@
 
     function reiniciar() {
       nave.x = canvas.width / 2;
-      nave.y = canvas.height / 2;
-      nave.angulo = 0;
       nave.velocidadX = 0;
-      nave.velocidadY = 0;
       balas = [];
       meteoritos = [];
       puntos = 0;
@@ -324,18 +304,13 @@
 
     function activarGiroscopio() {
       let filtroX = 0;
-      let filtroY = 0;
       let giroscopioPrimer = false;
-    
+
       window.addEventListener('deviceorientation', (e) => {
         const rawX = e.gamma / 45;
-        const rawY = e.beta  / 25;
         filtroX = filtroX * 0.7 + rawX * 0.3;
-        filtroY = filtroY * 0.7 + rawY * 0.3;
         inclinacionX = filtroX;
-        inclinacionY = filtroY;
-    
-        // Solo inicia los meteoritos la primera vez
+
         if (!giroscopioPrimer) {
           giroscopioPrimer = true;
           iniciarMetoritos();
@@ -350,8 +325,8 @@
       balas.push({
         x: nave.x,
         y: nave.y,
-        velocidadX: Math.sin(nave.angulo) * 8,
-        velocidadY: -Math.cos(nave.angulo) * 8
+        velocidadX: 0,
+        velocidadY: -8 // Siempre dispara hacia arriba
       });
     }
 
@@ -359,8 +334,7 @@
       balas = balas.filter(bala => {
         bala.x += bala.velocidadX;
         bala.y += bala.velocidadY;
-        return bala.x > 0 && bala.x < canvas.width &&
-               bala.y > 0 && bala.y < canvas.height;
+        return bala.y > -10;
       });
     }
 
@@ -381,7 +355,7 @@
       }
       ctx.save();
       ctx.translate(nave.x, nave.y);
-      ctx.rotate(nave.angulo);
+      // Siempre apunta hacia arriba (sin rotación)
       ctx.strokeStyle = 'white';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -394,26 +368,18 @@
     }
 
     function actualizarNave() {
-      const fuerza = Math.sqrt(inclinacionX * inclinacionX + inclinacionY * inclinacionY);
-      if (fuerza > 0.15) {
-        const anguloObjetivo = Math.atan2(inclinacionX, -inclinacionY);
-        let diff = anguloObjetivo - nave.angulo;
-        if (diff > Math.PI)  diff -= Math.PI * 2;
-        if (diff < -Math.PI) diff += Math.PI * 2;
-        nave.angulo += diff * 0.12;
-        const velocidad = Math.min(fuerza, 1) * 1.8;
-        nave.velocidadX += (Math.sin(nave.angulo) * velocidad - nave.velocidadX) * 0.15;
-        nave.velocidadY += (-Math.cos(nave.angulo) * velocidad - nave.velocidadY) * 0.15;
+      // Solo movimiento horizontal según inclinación
+      if (Math.abs(inclinacionX) > 0.1) {
+        nave.velocidadX += (inclinacionX * 3 - nave.velocidadX) * 0.15;
       } else {
-        nave.velocidadX *= 0.88;
-        nave.velocidadY *= 0.88;
+        nave.velocidadX *= 0.85;
       }
+
       nave.x += nave.velocidadX;
-      nave.y += nave.velocidadY;
-      if (nave.x < 0) nave.x = canvas.width;
-      if (nave.x > canvas.width)  nave.x = 0;
-      if (nave.y < 0) nave.y = canvas.height;
-      if (nave.y > canvas.height) nave.y = 0;
+
+      // Limita a los bordes de la pantalla (no se sale)
+      if (nave.x < nave.tamano) nave.x = nave.tamano;
+      if (nave.x > canvas.width - nave.tamano) nave.x = canvas.width - nave.tamano;
     }
 
     function loop() {
