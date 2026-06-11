@@ -195,16 +195,21 @@
       meteoritos = meteoritos.concat(meteoritosNuevos);
 
       if (naveEnemiga) {
+        let naveEnemigaDestruida = false;
         balas = balas.filter(bala => {
-          if (distancia(bala.x, bala.y, naveEnemiga.x, naveEnemiga.y) < naveEnemiga.tamano + 5) {
+          if (!naveEnemigaDestruida && distancia(bala.x, bala.y, naveEnemiga.x, naveEnemiga.y) < naveEnemiga.tamano + 5) {
             vidas++;
-            naveEnemiga = null;
+            naveEnemigaDestruida = true;
             puntos += 100;
             puntosUltimaEnemiga = puntos;
             return false;
           }
           return true;
         });
+        if (naveEnemigaDestruida) {
+          naveEnemiga = null;
+        }
+      }
 
         if (naveEnemiga && !invencible &&
             distancia(nave.x, nave.y, naveEnemiga.x, naveEnemiga.y) < naveEnemiga.tamano + nave.tamano * 0.6) {
