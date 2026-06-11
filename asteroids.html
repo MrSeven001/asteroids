@@ -87,7 +87,7 @@
     function iniciarMetoritos() {
       const cantidad = ronda + 3;
       for (let i = 0; i < cantidad; i++) {
-        meteoritos.push(crearMeteorito(20));
+        meteoritos.push(crearMeteorito(35));
       }
     }
 
@@ -357,7 +357,7 @@
     function actualizarNave() {
       // Solo movimiento horizontal según inclinación
       if (Math.abs(inclinacionX) > 0.1) {
-        nave.velocidadX += (inclinacionX * 3 - nave.velocidadX) * 0.15;
+        nave.velocidadX += (inclinacionX * 5 - nave.velocidadX) * 0.15;
       } else {
         nave.velocidadX *= 0.85;
       }
