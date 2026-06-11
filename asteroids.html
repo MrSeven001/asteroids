@@ -169,7 +169,7 @@
 
     function chequearColisiones() {
       let meteoritosNuevos = [];
-
+    
       meteoritos = meteoritos.filter(m => {
         let golpeado = false;
         balas = balas.filter(bala => {
@@ -179,21 +179,21 @@
           }
           return true;
         });
-
+    
         if (golpeado) {
           puntos += 10;
           return false;
         }
-
+    
         if (!invencible && distancia(nave.x, nave.y, m.x, m.y) < m.tamano + nave.tamano * 0.6) {
           perderVida();
         }
-
+    
         return true;
       });
-
+    
       meteoritos = meteoritos.concat(meteoritosNuevos);
-
+    
       if (naveEnemiga) {
         let naveEnemigaDestruida = false;
         balas = balas.filter(bala => {
@@ -210,19 +210,18 @@
           naveEnemiga = null;
         }
       }
-
-        if (naveEnemiga && !invencible &&
-            distancia(nave.x, nave.y, naveEnemiga.x, naveEnemiga.y) < naveEnemiga.tamano + nave.tamano * 0.6) {
-          naveEnemiga = null;
-          perderVida();
-        }
+    
+      if (naveEnemiga && !invencible &&
+          distancia(nave.x, nave.y, naveEnemiga.x, naveEnemiga.y) < naveEnemiga.tamano + nave.tamano * 0.6) {
+        naveEnemiga = null;
+        perderVida();
       }
-
+    
       if (!naveEnemiga && puntos >= puntosUltimaEnemiga + 250) {
         naveEnemiga = crearNaveEnemiga();
         puntosUltimaEnemiga = puntos;
       }
-
+    
       if (meteoritos.length === 0 && metoritosEnCola === 0) {
         ronda++;
         iniciarMetoritos();
