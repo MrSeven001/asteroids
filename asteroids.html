@@ -191,8 +191,8 @@
           balasEnemigas.push({
             x: v.x,
             y: v.y,
-            velocidadX: Math.cos(v.angulo) * 3,
-            velocidadY: Math.sin(v.angulo) * 3
+            velocidadX: Math.cos(v.angulo) * 1, // un poco de dispersión horizontal
+            velocidadY: Math.abs(Math.sin(v.angulo)) * 3 + 2 // siempre hacia abajo
           });
         });
       }
@@ -253,20 +253,29 @@
       ctx.stroke();
 
       // Barra de vida
-      const anchoBarra = 200;
-      const x = canvas.width / 2 - anchoBarra / 2;
-      const y = 20;
-      ctx.strokeStyle = 'white';
-      ctx.strokeRect(x, y, anchoBarra, 12);
-      ctx.fillStyle = 'orangered';
-      ctx.fillRect(x, y, anchoBarra * (jefe.vida / jefe.vidaMax), 12);
-    }
+      // Barra de vida (línea delgada arriba del jefe)
+      const anchoBarra = 80;
+      const x = jefe.x - anchoBarra / 2;
+      const y = jefe.y - jefe.tamano - 15;
+      ctx.strokeStyle = 'gray';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + anchoBarra, y);
+      ctx.stroke();
+      
+      ctx.strokeStyle = 'orangered';
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + anchoBarra * (jefe.vida / jefe.vidaMax), y);
+      ctx.stroke();
+          }
 
     function dibujarBalasEnemigas() {
       ctx.fillStyle = 'orangered';
       balasEnemigas.forEach(b => {
         ctx.beginPath();
-        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+        ctx.arc(b.x, b.y, 7, 0, Math.PI * 2);
         ctx.fill();
       });
     }
