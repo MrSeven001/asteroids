@@ -119,7 +119,7 @@
 
     function iniciarMetoritos() {
       const numeroRonda = ronda + 1;
-      if (numeroRonda % 2 === 0 && !jefe) {
+      if (numeroRonda % 10 === 0 && !jefe) {
         const numeroJefe = numeroRonda / 10;
         const config = obtenerConfigJefe(numeroJefe);
         jefe = crearJefe(config.lados, config.velocidad, config.intervalo);
