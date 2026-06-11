@@ -53,14 +53,13 @@
     let invencible = false;
 
     function crearMeteorito(tamano, x, y) {
-      // Siempre aparece arriba, en una posición X aleatoria
       if (x === undefined) {
         x = Math.random() * canvas.width;
         y = -tamano;
       }
-
-      const velocidad = tamano > 30 ? 1.0 : 1.8;
-
+    
+      const velocidad = 1.5 + Math.random() * 1.5; // velocidad variada
+    
       return {
         x, y, tamano,
         velocidadX: 0,
@@ -86,9 +85,9 @@
     }
 
     function iniciarMetoritos() {
-      const cantidad = ronda + 2;
+      const cantidad = ronda + 3;
       for (let i = 0; i < cantidad; i++) {
-        meteoritos.push(crearMeteorito(70));
+        meteoritos.push(crearMeteorito(20));
       }
     }
 
@@ -182,19 +181,7 @@
         });
 
         if (golpeado) {
-          if (m.tamano > 40) {
-            const pedazo1 = crearMeteorito(m.tamano / 2, m.x - 10, m.y);
-            pedazo1.velocidadX = -1;
-            pedazo1.velocidadY = 1.5;
-
-            const pedazo2 = crearMeteorito(m.tamano / 2, m.x + 10, m.y);
-            pedazo2.velocidadX = 1;
-            pedazo2.velocidadY = 1.5;
-
-            meteoritosNuevos.push(pedazo1);
-            meteoritosNuevos.push(pedazo2);
-          }
-          puntos += m.tamano > 40 ? 10 : 20;
+          puntos += 10;
           return false;
         }
 
